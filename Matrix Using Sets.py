@@ -4,7 +4,7 @@ from random import shuffle
 from secrets import randbelow
 
 MATRIX_SIZE = 3
-SET_SIZE = 200
+SET_SIZE = 2004
 
 """
 BITSTRING FUNCTIONS
@@ -70,6 +70,13 @@ class MatrixWithSets():
                 val.replace(i, j, toInsert)
         return val
     
+    def __eq__(self, other):
+        for i in range(MATRIX_SIZE):
+            for j in range(MATRIX_SIZE):
+                if self.matrix[i][j] != other.matrix[i][j]:
+                    return False
+        return True
+    
     def __pow__(self, k):
         k_binary = bin(k)
         val = MatrixWithSets()
@@ -113,10 +120,14 @@ def permute_matrix(self, perm):
         for j in range(MATRIX_SIZE):
             newM.replace(i, j, permute_array(self.matrix[i][j], perm))
     return newM
-
-
-
+    
 def tuple_exponent(self, k):
+    """
+    This is the standard square-and-multiply algorithm
+    applied to the tuples (M, h), M being a boolean matrix, h being
+    a permutation
+    """
+    
     k_binary = bin(k)
     value = self
     for digit in range(3, len(k_binary)): 
@@ -126,13 +137,44 @@ def tuple_exponent(self, k):
     
     return value  
 
-
-def semidirect_product(tupleA, tupleB):
-    shuffleM = permute_matrix(tupleA[0], tupleB[1])
-    firElem = shuffleM * tupleB[0]
-    secElem = permutation_product(tupleA[1], tupleB[1])
+def tuple_exponent_memoized(memo, k):
+    """
+    This is a modified version of square-and-multiply with
+    memoization. Alleviates the cost of running multiple trials
+    The input memo is the matrix containing (M, h) to powers of 2,
+    and k is the power of the array.
+    """
+    k_binary = bin(k)
+    value = memo[-1]
+    for digit in range(3, len(k_binary)):
+        if (k_binary[digit] == "1"):
+            value = semidirect_product(value, memo[2 - (digit + 1)])[:]
     
-    return (firElem, secElem)
+    return value  
+
+def semidirect_product(M_h, M_h_prime):
+    """
+    This is the standard semidirect product function
+    The two inputs are two tuples of the form (M, h) and (M', h')
+    """
+    shuffled_matrix_M = permute_matrix(M_h[0], M_h_prime[1])
+    first_elem = shuffled_matrix_M * M_h_prime[0]
+    second_elem = permutation_product(M_h[1], M_h_prime[1])
+    
+    return (first_elem, second_elem)
+
+
+def check_orbit(mh_tuple, k):
+    stored_indices = []
+    tuple_check = tuple_exponent(mh_tuple, k)
+    key = mh_tuple
+    for i in range(1, k):
+        if (tuple_check[0] == key[0]):
+            stored_indices.append(i)
+        
+        key = semidirect_product(key, (M, h))
+
+    return stored_indices
     
     
 
