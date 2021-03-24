@@ -1,10 +1,14 @@
-import numpy as np
+from math import floor
+from math import sqrt
+from permutation import Permutation
 from bitstring import BitArray
 from random import shuffle
+from random import randint
 from secrets import randbelow
 
 MATRIX_SIZE = 3
-SET_SIZE = 2004
+SET_SIZE = 200
+POWER_BITS = 200
 
 """
 BITSTRING FUNCTIONS
@@ -24,11 +28,7 @@ def random_bitarray():
 
 
 def permute_array(elem, perm):
-    newBitStr = BitArray(uint = 0, length = SET_SIZE)
-    for i in range(SET_SIZE):
-        newBitStr.set(elem[perm[i]], i)
-    
-    return newBitStr
+    return list(perm.permute(elem))
 
 
 
@@ -36,17 +36,48 @@ def permute_array(elem, perm):
 PERMUTATION FUNCTIONS
 """
 
-def permutation_product(permA, permB):
+def generate_permutation(size):
     """
-    The two inputs are permutations (represented as lists in this
-    program).
+    Input should be SET_SIZE
+    Special cases are 2 and 3, where a random shuffling of integers
+    are used as the permutation.
+    Else loop works as follows:
+        - Finds primes uses Sieve of Eratosthenes until sum of generated
+          primes (subcycle_length) exceeds size.
+        - Removes last number if subcycle_length is bigger than size.
+        - Uses subcycle_length to pull permutations out of the shuffled
+          list of integers.
     """
     
-    permC = np.empty(SET_SIZE, dtype=int)
-    for i in range(SET_SIZE):
-        permC[i] = permA[permB[i]]
-    return permC
-
+    shuffled_nums = [(i + 1) for i in range(size)]
+    shuffle(shuffled_nums)
+    
+    if (size == 2 or size == 3):
+        return Permutation.cycle(*shuffled_nums)
+    else:
+        bool_vals = [True for i in range(2, size)]
+        subcycle_lengths = []
+        
+        j = 0
+        while(sum(subcycle_lengths) < size and j < size - 2):
+            if (bool_vals[j] == True):
+                cur_val = 2
+                while ((j + 2) * cur_val < size):
+                    bool_vals[((j + 2) * cur_val) - 2] = False
+                    cur_val += 1
+                subcycle_lengths.append(j + 2)
+            j += 1
+        
+        if (sum(subcycle_lengths) > size):
+            subcycle_lengths.pop()
+        
+        perm = Permutation.cycle()
+        start = 0
+        for num in subcycle_lengths:
+            perm *= Permutation.cycle(*shuffled_nums[start:start + num])
+            start += num
+            
+        return perm
 
 
 class MatrixWithSets():
@@ -101,9 +132,11 @@ class MatrixWithSets():
         for i in range(MATRIX_SIZE):
             for j in range(MATRIX_SIZE):
                 if (i == j):
-                    self.matrix[i][j] = BitArray(uint = 0, length = SET_SIZE)
+                    self.matrix[i][j] = BitArray(uint = 0,
+                        length = SET_SIZE)
                 else:
-                    self.matrix[i][j] = BitArray(uint = (2**SET_SIZE) - 1, length = SET_SIZE)
+                    self.matrix[i][j] = BitArray(uint = (2**SET_SIZE)-1,
+                        length = SET_SIZE)
                     
     def randomize(self):
         for i in range(MATRIX_SIZE):
@@ -159,7 +192,7 @@ def semidirect_product(M_h, M_h_prime):
     """
     shuffled_matrix_M = permute_matrix(M_h[0], M_h_prime[1])
     first_elem = shuffled_matrix_M * M_h_prime[0]
-    second_elem = permutation_product(M_h[1], M_h_prime[1])
+    second_elem = M_h[1] * M_h_prime[1]
     
     return (first_elem, second_elem)
 
@@ -187,16 +220,15 @@ def check_orbit(mh_tuple, k):
 M = MatrixWithSets()
 M.randomize()
 
-h = np.arange(SET_SIZE)
-np.random.shuffle(h)
+h = generate_permutation(SET_SIZE)
 
-#   (ii) Alice and Bob pick two random integers
-a = randbelow(SET_SIZE)
-b = randbelow(SET_SIZE)
+#   (ii) Alice and Bob pick two random integers of POWER_BITS bits
+a = randint(2**(POWER_BITS-1), 2**POWER_BITS)
+b = randint(2**(POWER_BITS-1), 2**POWER_BITS)
 
 print("Matrix M:")
 print(M)
-print("Permutation:\n", h)
+print("Permutation:", h)
 print("a =", a)
 print("b =", b)
 
@@ -230,4 +262,11 @@ print("K_B")
 print(K_B)
 print("K")
 print(K)
+
+if (K_A == K_B):
+    print("Alice and Bob's Keys are the same...")
+    
+if (K == K_A):
+    print("Alice's Key is equal to the actual key.")
+
 
