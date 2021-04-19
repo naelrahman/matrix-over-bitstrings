@@ -1,4 +1,4 @@
-# set-key-exchange
+# Matrix over Bitstrings
 Tagline: Implementation for a key exchange using matrices with entries as sets of numbers
 
 This is a project I am working on with Prof. Vladimir Shpilrain of City College.
